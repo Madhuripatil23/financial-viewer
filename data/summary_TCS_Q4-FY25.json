@@ -1,0 +1,91 @@
+{
+  "metadata": {
+    "company": "TCS",
+    "report_generated_on": "2025-06-04",
+    "source_documents": [
+      {
+        "file_name": "TCS-transcript.pdf",
+        "type": "Earnings Call Transcript",
+        "period_covered": "latest_quarter",
+        "url": "/files/TCS-transcript.pdf"
+      },
+      {
+        "file_name": "TCS-ppt.pdf",
+        "type": "Investor Presentation",
+        "period_covered": "latest_quarter",
+        "url": "/files/TCS-ppt.pdf"
+      }
+    ],
+    "base_currency": {
+      "inr": "₹",
+      "usd": "$"
+    }
+  },
+  "data_extraction": {
+    "latest_quarter": {
+      "period_label": "Q4-FY25",
+      "revenue": {
+        "total_inr": "5000000000",
+        "total_usd": "610000000",
+        "cc_growth_pct": { "qoq": "4.5", "yoy": "9.2" },
+        "usd_growth_pct": { "qoq": "3.8", "yoy": "8.5" }
+      },
+      "profitability": {
+        "gross_margin_pct": "32.1",
+        "ebitda_inr": "1200000000",
+        "ebitda_margin_pct": "24.0",
+        "ebit_inr": "1000000000",
+        "ebit_margin_pct": "20.0",
+        "pat_inr": "850000000",
+        "pat_usd": "105000000",
+        "pat_margin_pct": "17.0",
+        "basic_eps_inr": "32.45"
+      },
+      "order_book": {
+        "tcv_new_deals": "2200000000",
+        "pipeline_commentary": "Strong pipeline with several AI-led deals."
+      },
+      "cash_flow_balance_sheet": {
+        "ocf_to_pat_ratio": "1.1",
+        "fcf_to_pat_ratio": "0.95",
+        "cash_and_investments_inr": "600000000",
+        "cash_and_investments_usd": "73000000",
+        "dso_days": "61"
+      },
+      "segment_performance": [
+        {
+          "segment": "Banking",
+          "revenue_inr": "1500000000",
+          "growth_pct_qoq": "5.2"
+        }
+      ],
+      "geographic_performance": [
+        {
+          "region": "North America",
+          "revenue_inr": "3000000000",
+          "growth_pct_qoq": "3.1"
+        }
+      ],
+      "headcount_metrics": {
+        "total_headcount": "600000",
+        "net_additions_yoy": "20000",
+        "attrition_pct_ttm": "13.2",
+        "utilization_excl_trainees_pct": "84.5"
+      },
+      "dividend": { "final_dividend_per_share_inr": "12" }
+    }
+  },
+  "financial_analysis": {
+    "performance_summary": "TCS posted strong growth driven by AI-led demand, with QoQ and YoY improvements in all key metrics.",
+    "trend_analysis": {
+      "latest_quarter": { "narrative": "Q4 saw steady revenue growth and margin expansion." },
+      "full_year": { "narrative": "Full year showed consistent execution and healthy cash flows." }
+    },
+    "segment_geographic_deep_dive": "Banking and North America led the momentum.",
+    "deal_wins_pipeline_quality": "Significant wins across AI and cloud projects.",
+    "management_commentary_outlook": "Management remains optimistic about FY26, especially in BFSI and manufacturing.",
+    "comparison_to_expectations": "Results beat consensus estimates.",
+    "key_risks_headwinds": "Macroeconomic volatility and wage pressures.",
+    "operational_efficiency": "Improved DSO and utilization; stable attrition."
+  }
+}
