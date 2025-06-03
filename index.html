@@ -1,3 +1,359 @@
 <!DOCTYPE html>
-<!-- HTML omitted for brevity; use full content you posted earlier -->
-<html><body><p>This is a placeholder. Replace with full UI.</p></body></html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Financial-Docs Browser</title>
+
+  <!-- Tailwind CDN -->
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet"/>
+
+  <style>
+    #sidebar { max-height: 100vh; overflow-y: auto; }
+    iframe   { width: 100%; border: 0; }
+  </style>
+</head>
+
+<body class="h-full bg-gray-100 text-gray-900 flex">
+
+  <!-- ───────── Sidebar ───────── -->
+  <aside id="sidebar" class="w-64 bg-white shadow-md p-4 space-y-4">
+    <h2 class="text-xl font-semibold">Companies</h2>
+    <nav id="menu" class="space-y-2 text-sm"></nav>
+  </aside>
+
+  <!-- ───────── Main pane ───────── -->
+  <main id="main" class="flex-1 p-6 space-y-6 overflow-y-auto">
+    <p class="text-gray-500">Select any period from the left-hand menu…</p>
+  </main>
+
+  <!-- ───────── Embedded template (FULL body of 1.html) ───────── -->
+  <script type="text/html" id="ui-template">
+    <!-- ▼▼ ORIGINAL 1.html <body> … </body> STARTS HERE ▼▼ -->
+    <body class="bg-gray-100 text-gray-900 min-h-screen flex flex-col items-center p-6 space-y-6">
+      <h1 class="text-3xl font-bold">Financial Report Viewer</h1>
+
+      <!-- Top-level tab group -->
+      <div id="top-group" class="w-full max-w-6xl space-y-4 hidden">
+        <div id="top-btns"  class="flex flex-wrap gap-2"></div>
+        <div id="top-panes" class="border rounded-lg bg-white p-4 shadow-sm"></div>
+      </div>
+
+      <!-- ========== ALL original helpers from 1.html ========== -->
+      <script>
+        /* ---------- Helper functions ---------- */
+        const fmtN  = n => n == null || n === '' ? '–' : Number(n).toLocaleString('en-IN');
+        const fmtP  = p => p == null || p === '' ? '–' : `${Number(p).toFixed(2)}%`;
+        const cur   = (n, s) => n == null || n === '' ? '–' : s + fmtN(n);
+
+        const makeBtn = (label, key, active = false) => {
+          const b = document.createElement('button');
+          b.textContent = label;
+          b.dataset.tab = key;
+          b.className = `px-3 py-1 rounded-t border-b-2 font-medium text-sm ${active ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-600'}`;
+          return b;
+        };
+
+        const makeTable = (heads, rows) => {
+          const t = document.createElement('table');
+          t.className = 'min-w-full table-auto border border-gray-300 text-sm';
+          t.innerHTML = `<thead><tr class='bg-gray-200'>
+              ${heads.map(h => `<th class='px-3 py-2 border text-center font-medium'>${h}</th>`).join('')}
+            </tr></thead>
+            <tbody>
+              ${rows.map((row,i) => `
+                <tr class='${i%2 ? 'bg-gray-50' : ''}'>
+                  ${row.map(c => `<td class='px-3 py-1 border text-center'>${c}</td>`).join('')}
+                </tr>`).join('')}
+            </tbody>`;
+          return t;
+        };
+
+        /** Attach click listeners to a tab group */
+        const wireGroup = (btnWrap, paneWrap) => {
+          const buttons = [...btnWrap.children];
+          const panes   = [...paneWrap.children];
+          buttons.forEach(btn => btn.addEventListener('click', () => {
+            const tgt = btn.dataset.tab;
+            buttons.forEach(b => {
+              const act = b.dataset.tab === tgt;
+              b.classList.toggle('border-blue-600', act);
+              b.classList.toggle('text-blue-600', act);
+              b.classList.toggle('text-gray-600', !act);
+            });
+            panes.forEach(p => p.classList.toggle('hidden', p.dataset.tabContent !== tgt));
+          }));
+        };
+
+        /* ---------- Load JSON from injected URL ---------- */
+        async function loadJSON () {
+          const url = window.REPORT_JSON_URL;            // ← fixed line
+          try {
+            const res = await fetch(url);
+            if (!res.ok) {
+              const msg = await res.text();
+              throw new Error(`HTTP ${res.status}: ${msg}`);
+            }
+            const d = await res.json();
+            buildUI(d);
+          } catch (err) {
+            console.error(err);
+            document.body.innerHTML =
+              '<p class="p-4 text-red-600">Failed to load summary.</p>';
+          }
+        }
+
+        /* ---------- Build UI (unchanged from 1.html) ---------- */
+        function buildUI (d) {
+          const INR = d.metadata.base_currency?.inr || '₹';
+          const USD = d.metadata.base_currency?.usd || '$';
+
+          const topGroup = document.getElementById('top-group');
+          const topBtns  = document.getElementById('top-btns');
+          const topPanes = document.getElementById('top-panes');
+          topBtns.innerHTML = ''; topPanes.innerHTML = '';
+
+          const addTopTab = (label, key, paneEl) => {
+            const first = !topBtns.children.length;
+            topBtns.appendChild(makeBtn(label, key, first));
+            paneEl.dataset.tabContent = key;
+            if (!first) paneEl.classList.add('hidden');
+            topPanes.appendChild(paneEl);
+          };
+
+          /* ---- Metadata pane ---- */
+          const metaPane = document.createElement('div');
+          metaPane.className = 'space-y-4';
+          metaPane.innerHTML = `
+            <ul class='list-disc pl-6 text-sm space-y-1'>
+              <li><strong>Company:</strong> ${d.metadata.company}</li>
+              <li><strong>Generated On:</strong> ${d.metadata.report_generated_on}</li>
+              <li><strong>Currency Symbols:</strong> INR ${INR} | USD ${USD}</li>
+            </ul>`;
+          if (Array.isArray(d.metadata.source_documents)) {
+            const ul = document.createElement('ul');
+            ul.className = 'list-disc pl-6 text-sm space-y-1';
+            d.metadata.source_documents.forEach(s => {
+              ul.innerHTML += `
+                <li><strong>${s.type}:</strong> ${s.file_name} (${s.period_covered})
+                  ${s.url ? ` – <a href='${s.url}' target='_blank' class='text-blue-600 underline'>link</a>` : ''}</li>`;
+            });
+            metaPane.appendChild(ul);
+          }
+          addTopTab('Metadata','meta',metaPane);
+
+          /* ---- Helper to create period panes with sub-tabs ---- */
+          const makePeriodPane = (p, isQuarter) => {
+        const group = document.createElement('div');
+        const btnRow = document.createElement('div');
+        btnRow.className = 'flex flex-wrap gap-2 mb-3';
+        const paneRow = document.createElement('div');
+        paneRow.className = 'border rounded-lg bg-gray-50 p-4';
+        group.append(btnRow, paneRow);
+
+        const addSubTab = (label, key, el) => {
+          const first = !btnRow.children.length;
+          btnRow.appendChild(makeBtn(label, key, first));
+          el.dataset.tabContent = key;
+          if (!first) el.classList.add('hidden');
+          paneRow.appendChild(el);
+        };
+
+        /* Revenue */
+        if (p.revenue) {
+          const h = [`Total (${INR})`, `Total (${USD})`, ...(isQuarter ? ['CC QoQ %', 'CC YoY %', 'USD QoQ %', 'USD YoY %'] : ['CC YoY %', 'USD YoY %'])];
+          const r = isQuarter ? [
+            cur(p.revenue.total_inr, INR), cur(p.revenue.total_usd, USD), fmtP(p.revenue.cc_growth_pct?.qoq), fmtP(p.revenue.cc_growth_pct?.yoy), fmtP(p.revenue.usd_growth_pct?.qoq), fmtP(p.revenue.usd_growth_pct?.yoy)
+          ] : [
+            cur(p.revenue.total_inr, INR), cur(p.revenue.total_usd, USD), fmtP(p.revenue.cc_growth_pct_yoy), fmtP(p.revenue.usd_growth_pct_yoy)
+          ];
+          addSubTab('Revenue', 'rev', makeTable(h, [r]));
+        }
+
+        /* Profitability */
+        if (p.profitability) {
+          const x = p.profitability;
+          const h = ['Gross %', `EBITDA (${INR})`, 'EBITDA %', `EBIT (${INR})`, 'EBIT %', `PAT (${INR})`, `PAT (${USD})`, 'PAT %', `EPS (${INR})`];
+          const r = [fmtP(x.gross_margin_pct), cur(x.ebitda_inr, INR), fmtP(x.ebitda_margin_pct), cur(x.ebit_inr, INR), fmtP(x.ebit_margin_pct), cur(x.pat_inr, INR), cur(x.pat_usd, USD), fmtP(x.pat_margin_pct), cur(x.basic_eps_inr, INR)];
+          addSubTab('Profitability', 'prof', makeTable(h, [r]));
+        }
+
+        /* Segment */
+        if (Array.isArray(p.segment_performance) && p.segment_performance.length) {
+          const h = ['Segment', `Revenue (${INR})`, isQuarter ? 'QoQ %' : 'YoY %'];
+          const rows = p.segment_performance.map(s => [s.segment, cur(s.revenue_inr, INR), fmtP(isQuarter ? s.growth_pct_qoq : s.growth_pct_yoy)]);
+          addSubTab('Segment', 'seg', makeTable(h, rows));
+        }
+
+        /* Geography */
+        if (Array.isArray(p.geographic_performance) && p.geographic_performance.length) {
+          const h = ['Region', `Revenue (${INR})`, isQuarter ? 'QoQ %' : 'YoY %'];
+          const rows = p.geographic_performance.map(g => [g.region, cur(g.revenue_inr, INR), fmtP(isQuarter ? g.growth_pct_qoq : g.growth_pct_yoy)]);
+          addSubTab('Geography', 'geo', makeTable(h, rows));
+        }
+
+        /* Headcount */
+        if (p.headcount_metrics) {
+          const h = p.headcount_metrics;
+          const el = document.createElement('div');
+          el.innerHTML = `
+            <ul class='list-disc pl-6 text-sm space-y-1'>
+              <li><strong>Total:</strong> ${fmtN(h.total_headcount)}</li>
+              <li><strong>Net Additions YoY:</strong> ${fmtN(h.net_additions_yoy)}</li>
+              <li><strong>Attrition:</strong> ${fmtP(h.attrition_pct_ttm)}</li>
+              <li><strong>Utilization ex‑trainees:</strong> ${fmtP(h.utilization_excl_trainees_pct)}</li>
+            </ul>`;
+          addSubTab('Headcount', 'hc', el);
+        }
+
+        /* Order Book */
+        if (p.order_book) {
+          const o = p.order_book;
+          const el = document.createElement('div');
+          el.innerHTML = `
+            <ul class='list-disc pl-6 text-sm space-y-1'>
+              <li><strong>TCV:</strong> ${fmtN(o.tcv_new_deals || o.tcv_fy)}${o.tcv_growth_pct_yoy ? ` (YoY ${fmtP(o.tcv_growth_pct_yoy)})` : ''}</li>
+              <li><strong>Pipeline:</strong> ${o.pipeline_commentary || '–'}</li>
+            </ul>`;
+          addSubTab('Order Book', 'ob', el);
+        }
+
+        /* Cash & Balance Sheet */
+        if (p.cash_flow_balance_sheet) {
+          const c = p.cash_flow_balance_sheet;
+          const el = document.createElement('div');
+          el.innerHTML = `
+            <ul class='list-disc pl-6 text-sm space-y-1'>
+              <li><strong>OCF / PAT:</strong> ${fmtP(c.ocf_to_pat_ratio)}</li>
+              <li><strong>FCF / PAT:</strong> ${fmtP(c.fcf_to_pat_ratio)}</li>
+              <li><strong>Cash & Investments:</strong> ${cur(c.cash_and_investments_inr, INR)} (${cur(c.cash_and_investments_usd, USD)})</li>
+              <li><strong>DSO:</strong> ${fmtN(c.dso_days)} days</li>
+            </ul>`;
+          addSubTab('Cash & BS', 'cf', el);
+        }
+
+        /* Dividend */
+        if (p.dividend) {
+          const d = p.dividend;
+          const el = document.createElement('div');
+          el.innerHTML = `<p class='text-sm'>Dividend per Share: ${cur(d.final_dividend_per_share_inr || d.total_dividend_per_share_inr, INR)}</p>`;
+          addSubTab('Dividend', 'div', el);
+        }
+
+        wireGroup(btnRow, paneRow);
+        return group;
+      };
+  /* unchanged */
+
+          /* ---- Quarter & FY panes ---- */
+          if (d.data_extraction?.latest_quarter){
+            addTopTab(`Quarter – ${d.data_extraction.latest_quarter.period_label}`,
+              'qtr', makePeriodPane(d.data_extraction.latest_quarter,true));
+          }
+          if (d.data_extraction?.current_fy){
+            addTopTab(`Full Year – ${d.data_extraction.current_fy.period_label}`,
+              'fy', makePeriodPane(d.data_extraction.current_fy,false));
+          }
+
+          /* ---- Commentary ---- */
+          if (d.financial_analysis){
+            const comm=document.createElement('div'); comm.className='space-y-4';
+            comm.innerHTML=`<h3 class='font-semibold'>Performance Summary</h3>
+              <p class='text-sm leading-relaxed'>${d.financial_analysis.performance_summary||'–'}</p>`;
+            addTopTab('Commentary','comm',comm);
+          }
+
+          wireGroup(topBtns,topPanes);
+          topGroup.classList.remove('hidden');
+        }
+
+        /* ---------- Kick-off ---------- */
+        loadJSON();
+      </script>
+    </body>
+    <!-- ▲▲ ORIGINAL 1.html body ENDS HERE ▲▲ -->
+  </script>
+
+  <!-- ───────── Front-end controller ───────── -->
+  <script>
+    const ROOT   = "";                         // same origin
+    const menuEl = document.getElementById("menu");
+    const mainEl = document.getElementById("main");
+    const tpl    = document.getElementById("ui-template").innerHTML.trim();
+
+    /* ---- fetch company tree ---- */
+    fetch(`${ROOT}/api/tree`)
+      .then(async r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+      .then(tree => buildMenu(tree ?? {}))
+      .catch(err => {
+        console.error("Tree load failed:", err);
+        menuEl.innerHTML = '<p class="text-red-600">Error loading company list.</p>';
+      });
+
+    function buildMenu(tree){
+      if (Object.keys(tree).length===0){
+        menuEl.innerHTML = '<p class="text-gray-500">No companies found.</p>'; return;
+      }
+
+      Object.entries(tree).sort().forEach(([company,years])=>{
+        const details=document.createElement("details"); details.className='border rounded';
+        const sum=document.createElement("summary"); sum.textContent=company;
+        sum.className='cursor-pointer py-1 px-2 font-medium';
+        details.appendChild(sum);
+
+        const ul=document.createElement("ul"); ul.className='pl-4 space-y-1 pb-2';
+        Object.keys(years).sort((a,b)=>b.localeCompare(a)).forEach(ym=>{
+          const li=document.createElement("li");
+          const a=document.createElement("a");
+          a.href='#'; a.textContent=ym.replace("_"," / ");
+          a.className='text-blue-600 hover:underline';
+          a.onclick=e=>{
+            e.preventDefault();
+            loadPeriod(company,ym,years[ym]);
+          };
+          li.appendChild(a); ul.appendChild(li);
+        });
+
+        details.appendChild(ul); menuEl.appendChild(details);
+      });
+    }
+
+    /* ---- load period ---- */
+    function loadPeriod(company, ym, paths){
+      const { ppt, transcript } = paths;
+
+      mainEl.innerHTML = `
+        <h2 class="text-2xl font-bold mb-4">${company} — ${ym.replace("_"," / ")}</h2>
+        <div class="mb-6 space-x-4">
+          <a href="/files/${ppt}"        class="bg-blue-600  text-white px-4 py-1 rounded shadow">Download PPT</a>
+          <a href="/files/${transcript}" class="bg-green-600 text-white px-4 py-1 rounded shadow">Download Transcript</a>
+        </div>
+        <div id="summary-box"></div>`;
+
+      const summaryUrl = `${ROOT}/api/summary/${encodeURIComponent(company)}/${ym}`;
+      const html = `
+        <html lang="en">
+          <head>
+            <meta charset="utf-8">
+            <script>
+              window.REPORT_JSON_URL = "${summaryUrl}";
+            <\\/script>
+          <\\/head>
+          ${tpl}
+        <\\/html>`;
+
+      const frame = document.createElement("iframe");
+      frame.srcdoc = html;
+      frame.onload = () => {
+        frame.style.height = frame.contentDocument.body.scrollHeight + "px";
+      };
+      document.getElementById("summary-box").appendChild(frame);
+
+      /* open the selected accordion item */
+      [...menuEl.querySelectorAll("details")].forEach(d => {
+        d.open = (d.querySelector("summary").textContent === company);
+      });
+    }
+  </script>
+</body>
+</html>
